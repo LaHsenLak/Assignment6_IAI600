@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import math
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans, DBSCAN
@@ -26,12 +27,22 @@ def _label_to_colors(labels, noise_color=(0.75, 0.75, 0.75, 1.0)):
         out[i] = noise_color if lab == -1 else color_map[lab]
     return out
 
-# Load & scale data
+def _label_to_colors_no_noise(labels):
+    labels = np.asarray(labels)
+    uniq = sorted(np.unique(labels))
+    cmap = _palette(len(uniq))
+    color_map = {u: cmap(i) for i, u in enumerate(uniq)}
+    out = np.empty((labels.size, 4), dtype=float)
+    for i, lab in enumerate(labels):
+        out[i] = color_map[lab]
+    return out
+
 def load_data(path="housing.csv"):
     df = pd.read_csv(path)
     cols = ["longitude", "latitude", "median_income"]
     df = df.dropna(subset=cols).copy()
     return df[cols]
+
 
 df = load_data()
 X_raw = df.values
@@ -60,6 +71,27 @@ plt.xlabel("k")
 plt.ylabel("Silhouette score")
 plt.title("Silhouette score vs k")
 plt.tight_layout()
+plt.show()
+
+cols = 3
+rows = math.ceil(len(ks) / cols)
+plt.close('all')
+fig, axes = plt.subplots(rows, cols, figsize=(cols*5, rows*4), sharex=True, sharey=True)
+
+for i, k in enumerate(ks):
+    ax = axes[i // cols, i % cols]
+    labels_k = per_k_labels[k]
+    colors_k = _label_to_colors_no_noise(labels_k)
+    ax.scatter(df["longitude"], df["latitude"], c=colors_k, s=5, linewidths=0)
+    ax.set_title(f"K-Means (k={k})", fontsize=11)
+    ax.set_xlabel("Longitude")
+    ax.set_ylabel("Latitude")
+
+for j in range(len(ks), rows * cols):
+    fig.delaxes(axes[j // cols, j % cols])
+
+plt.suptitle("K-Means clustering across different k", fontsize=14)
+plt.tight_layout(rect=[0, 0, 1, 0.97])
 plt.show()
 
 best_labels = per_k_labels[best_k]
